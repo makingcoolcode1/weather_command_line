@@ -1,7 +1,7 @@
 
+
 package com.home;
 
-import java.net.URL;
 import java.util.Scanner;
 
 import org.json.JSONArray;
@@ -11,79 +11,69 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 
 public class Main {
 
+    public static String apiURL = "https://api.openweathermap.org/data/2.5/weather";
     public static String apiKey;
     public static String citySearch;
-    public static String apiURL = "https://api.openweathermap.org/data/2.5/weather";
-    
 
     public static void main(String[] args) {
 
         Scanner scanner = new Scanner(System.in);
         
-        System.out.println("\n**WELCOME TO THE WEATHER APP**");
-        System.out.println("\nYou must sign up for a free API key from openweathermap.org to access the app!");
+        System.out.println("\nWelcome to the weather app!");
+        System.out.println("\nYou must sign up for a free API key from openweathermap.org to proceed.....");
 
-        boolean APIKeyValidated = false;
+        boolean apiKeyValidated = false;
 
-        while (!APIKeyValidated) {
+        while (!apiKeyValidated) {
 
-            System.out.println("\nPlease enter your API Key: ");
+            System.out.println("\nPlease enter your API key: ");
 
             apiKey = scanner.nextLine();
 
             if (apiKey.equals("exit")) {
-                System.out.println("Exiting Program....");
+                System.out.println("\nExiting Program....");
                 System.exit(0);
-                
             }
 
             if (apiKey.isBlank()) {
-                System.out.println("ERROR! API key cannot be blank!");
+                System.out.println("\nERROR! API Key cannot be blank!");
                 continue;
             }
 
-            if (vaidateAPIKey(apiKey)) {
-                
-                System.out.println("\nAPI KEY VALIDATD!");
-                APIKeyValidated = true;
+            if (validateKey(apiKey)) {
+
+                System.out.println("\nAPI KEY VALID");
+                apiKeyValidated = true;
             } else {
-                System.out.println("\nERROR! Failed to validate API key. Please check your entry or enter another key. ");
+                System.out.println("ERROR! Failed to validate API Key.");
             }
             
         }
 
-        while (true) {
 
-            System.out.println("Enter a city: ");
+        while (true) {
+            System.out.println("\nPlease enter a city: ");
 
             citySearch = scanner.nextLine();
 
-            if (citySearch.equals("exit")) {
-                System.out.println("Exiting Program....");
-                System.exit(0);
-            }
-
-            if (citySearch.isBlank()) {
-                System.out.println("ERROR! City cannot be blank!");
-                continue;
-            }
-            
             try {
                 
-                URI cityURI = new URI(buildAPIURL(citySearch));
-                URL cityURL = cityURI.toURL();
+                URI mainURI = new URI(buildAPIURL(citySearch));
+                URL mainURL = mainURI.toURL();
 
-                HttpURLConnection mainConnection = (HttpURLConnection) cityURL.openConnection();
+                HttpURLConnection mainConnection = (HttpURLConnection) mainURL.openConnection();
 
-                int responseCode = mainConnection.getResponseCode();
-                if (responseCode == HttpURLConnection.HTTP_OK) {
+                int mainResponse = mainConnection.getResponseCode();
+
+                if (mainResponse == (HttpURLConnection.HTTP_OK)) {
 
                     BufferedReader reader = new BufferedReader(new InputStreamReader(mainConnection.getInputStream()));
 
-                    String line; 
+                    String line;
 
                     StringBuffer response = new StringBuffer();
 
@@ -91,27 +81,42 @@ public class Main {
                         response.append(line);
                         
                     }
-                    
+
                     parseWeatherData(response.toString());
                     
-                } else if (responseCode == HttpURLConnection.HTTP_NOT_FOUND) {
-                    System.out.println("NO CITY FOUND");
+                } else if (mainResponse == 404) {
+                    System.out.println("ERROR! No city found");
                     
-                } else{
-                    System.out.println("ERROR Fetching eather data");
-                }
+                } 
+
 
             } catch (Exception e) {
-                e.printStackTrace();
-
-                System.out.println("NO CITY FOUND");
+                System.out.println("ERROR! Failed to connect to API!");
             }
             
         }
 
     }
 
-    public static boolean vaidateAPIKey(String apiKey) {
+    private static void parseWeatherData(String getData) {
+
+        JSONObject json = new JSONObject(getData);
+
+        JSONArray weatherArr = json.getJSONArray("weather");
+
+        JSONObject object1 = weatherArr.getJSONObject(0);
+
+        String description = object1.getString("description");
+
+        System.out.println("Description: " + description);
+        
+    }
+
+    private static String buildAPIURL(String citySearch) {
+        return String.format(apiURL + "?q=" + citySearch + "&appid=" + apiKey);
+    }
+
+    private static boolean validateKey(String apiKey) {
 
         try {
             
@@ -122,53 +127,17 @@ public class Main {
 
             testConnect.setRequestMethod("GET");
 
-            int testRequest = testConnect.getResponseCode();
+            int testResponse = testConnect.getResponseCode();
 
-            return testRequest == 200;
+            return testResponse == 200;
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return false;
-        
-    }
-
-    public static String buildAPIURL(String citySearch){
-
-        return String.format(apiURL +"?q=" + citySearch + "&appid=" + apiKey);
-        
-    }
-
-    public static void parseWeatherData(String getData) {
-
-        try {
-
-            JSONObject json = new JSONObject(getData);
-
-            if (!json.has("weather")) {
-                System.out.println("ERROR");
-                return;
-                
-            }
-
-            JSONArray weatherArr = json.getJSONArray("weather");
-    
-            JSONObject ob1 = weatherArr.getJSONObject(0);
-    
-            String descriptionData = ob1.getString("description");
-    
-            System.out.println("Current Conditions: " + descriptionData);
             
-
         } catch (Exception e) {
-            System.out.println("ERROR Parsing weather data");
             e.printStackTrace();
         }
-
-
-
+        
+        return false;
     }
 
-    
+  
 }
